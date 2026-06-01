@@ -1,12 +1,16 @@
 import { useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
+  Bot,
   Camera,
   ChevronDown,
   Check,
+  Code2,
+  Database,
   Flame,
   Heart,
   ImagePlus,
+  MessageSquareText,
   RefreshCw,
   SlidersHorizontal,
   Sparkles,
@@ -129,6 +133,34 @@ const defaultProfile = {
   avoids: ["腥味"],
 };
 
+const defaultTasteMemory = {
+  liked:
+    "韩式炸鸡、糖醋里脊、芝士蛋糕、日式咖喱、珍珠奶茶",
+  familiar: "麻辣烫、烧烤、番茄牛腩、沙县拌面、奶茶",
+  disliked: "香菜、苦瓜、太腥的海鲜、内脏、太油",
+};
+
+const modelProviders = [
+  {
+    id: "qwen",
+    name: "Qwen 视觉",
+    role: "主模型",
+    description: "识别食材、做法、视觉线索并输出味道 JSON。",
+  },
+  {
+    id: "doubao",
+    name: "豆包视觉",
+    role: "备选",
+    description: "适合做速度、成本和中文描述对比。",
+  },
+  {
+    id: "kimi",
+    name: "Kimi 解释",
+    role: "表达层",
+    description: "把结构化结果翻译成用户熟悉的味道。",
+  },
+];
+
 const flavorLabels = {
   sweet: "甜",
   spicy: "辣",
@@ -168,20 +200,18 @@ function App() {
   const fileInputRef = useRef(null);
   const reportRef = useRef(null);
   const [profile, setProfile] = useState(defaultProfile);
+  const [tasteMemory, setTasteMemory] = useState(defaultTasteMemory);
+  const [selectedProvider, setSelectedProvider] = useState("qwen");
   const [visualSource, setVisualSource] = useState(initialSource);
   const [analysisSource, setAnalysisSource] = useState(initialSource);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [history, setHistory] = useState([]);
-  const [profileOpen, setProfileOpen] = useState(() =>
-    typeof window === "undefined"
-      ? true
-      : window.matchMedia("(min-width: 821px)").matches
-  );
+  const [profileOpen, setProfileOpen] = useState(true);
 
   const report = useMemo(
-    () => buildReport(analysisSource, profile),
-    [analysisSource, profile]
+    () => buildReport(analysisSource, profile, tasteMemory, selectedProvider),
+    [analysisSource, profile, tasteMemory, selectedProvider]
   );
 
   function scrollToReport() {
@@ -204,7 +234,12 @@ function App() {
 
     window.setTimeout(() => {
       setAnalysisSource(nextSource);
-      const nextReport = buildReport(nextSource, profile);
+      const nextReport = buildReport(
+        nextSource,
+        profile,
+        tasteMemory,
+        selectedProvider
+      );
       setHistory((items) => [
         {
           id: `${Date.now()}-${nextSource.id || nextSource.title}`,
@@ -243,7 +278,12 @@ function App() {
 
     window.setTimeout(() => {
       setAnalysisSource(uploadSource);
-      const nextReport = buildReport(uploadSource, profile);
+      const nextReport = buildReport(
+        uploadSource,
+        profile,
+        tasteMemory,
+        selectedProvider
+      );
       setHistory((items) => [
         {
           id: `${Date.now()}-${file.name}`,
@@ -272,6 +312,10 @@ function App() {
           : [...current.avoids, label],
       };
     });
+  }
+
+  function updateTasteMemory(key, value) {
+    setTasteMemory((current) => ({ ...current, [key]: value }));
   }
 
   function handleDrop(event) {
@@ -356,6 +400,7 @@ function App() {
           <QuickSnapshot
             isAnalyzing={isAnalyzing}
             report={report}
+            memory={tasteMemory}
             onViewReport={scrollToReport}
           />
 
@@ -382,8 +427,8 @@ function App() {
         >
           <div className="panel-title compact">
             <div>
-              <h2>我的口味</h2>
-              <p>推荐分会跟着变。</p>
+              <h2>我的味觉</h2>
+              <p>先输入熟悉的食物，再看新味道。</p>
             </div>
             <button
               className="profile-toggle"
@@ -402,6 +447,16 @@ function App() {
             id="profile-content"
             hidden={!profileOpen}
           >
+            <TasteMemoryEditor
+              memory={tasteMemory}
+              onChange={updateTasteMemory}
+            />
+
+            <ModelProviderPicker
+              selectedProvider={selectedProvider}
+              onSelect={setSelectedProvider}
+            />
+
             <PreferenceGroup
               label="辣度上限"
               options={profileOptions.spiceTolerance}
@@ -483,8 +538,9 @@ function App() {
   );
 }
 
-function QuickSnapshot({ isAnalyzing, report, onViewReport }) {
+function QuickSnapshot({ isAnalyzing, report, memory, onViewReport }) {
   const topFlavors = getTopFlavorLabels(report.scores).slice(0, 3);
+  const [firstReference] = parseTasteMemory(memory).likedFoods;
 
   return (
     <div className="quick-snapshot">
@@ -493,11 +549,95 @@ function QuickSnapshot({ isAnalyzing, report, onViewReport }) {
         <strong>
           {isAnalyzing ? "生成味道画像中" : `${report.match}% ${getVerdict(report.match)}`}
         </strong>
-        <p>{isAnalyzing ? "识别食材、做法和个人偏好" : topFlavors.join(" / ")}</p>
+        <p>
+          {isAnalyzing
+            ? "识别食材、做法和个人偏好"
+            : `${topFlavors.join(" / ")} · 参照 ${firstReference || "你的味觉记忆"}`}
+        </p>
       </div>
       <button type="button" onClick={onViewReport}>
         {isAnalyzing ? "稍等" : "详情"}
       </button>
+    </div>
+  );
+}
+
+function TasteMemoryEditor({ memory, onChange }) {
+  const parsed = parseTasteMemory(memory);
+
+  return (
+    <div className="memory-editor">
+      <div className="module-heading">
+        <Database size={18} />
+        <div>
+          <h3>味觉记忆</h3>
+          <p>先告诉它你熟悉什么味道。</p>
+        </div>
+      </div>
+
+      <MemoryField
+        label="喜欢吃"
+        value={memory.liked}
+        onChange={(value) => onChange("liked", value)}
+      />
+      <MemoryField
+        label="熟悉的味道"
+        value={memory.familiar}
+        onChange={(value) => onChange("familiar", value)}
+      />
+      <MemoryField
+        label="不喜欢"
+        value={memory.disliked}
+        onChange={(value) => onChange("disliked", value)}
+      />
+
+      <div className="memory-chips">
+        {parsed.preferredTraits.slice(0, 6).map((trait) => (
+          <span key={trait}>{trait}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MemoryField({ label, value, onChange }) {
+  return (
+    <label className="memory-field">
+      <span>{label}</span>
+      <textarea
+        value={value}
+        rows={2}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
+  );
+}
+
+function ModelProviderPicker({ selectedProvider, onSelect }) {
+  return (
+    <div className="model-picker">
+      <div className="module-heading">
+        <Bot size={18} />
+        <div>
+          <h3>模型方案</h3>
+          <p>网页原型先模拟，后端可接真实 API。</p>
+        </div>
+      </div>
+
+      <div className="provider-list">
+        {modelProviders.map((provider) => (
+          <button
+            className={selectedProvider === provider.id ? "active" : ""}
+            key={provider.id}
+            type="button"
+            onClick={() => onSelect(provider.id)}
+          >
+            <strong>{provider.name}</strong>
+            <span>{provider.role}</span>
+            <em>{provider.description}</em>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -602,6 +742,25 @@ function TasteReport({ report, image, feedback, onFeedback }) {
 
       <p className="flavor-copy">{report.description}</p>
 
+      <div className="translation-card">
+        <div className="module-heading">
+          <MessageSquareText size={18} />
+          <div>
+            <h3>按你的味觉翻译</h3>
+            <p>{report.personalTranslation}</p>
+          </div>
+        </div>
+        <div className="comparison-list">
+          {report.userComparisons.map((item) => (
+            <div key={item.food}>
+              <span>{item.food}</span>
+              <strong>{item.similarity}%</strong>
+              <p>{item.reason}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="tag-section">
         <TagGroup title="口感" tags={report.textures} />
         <TagGroup title="香气" tags={report.aromas} />
@@ -617,6 +776,14 @@ function TasteReport({ report, image, feedback, onFeedback }) {
         <AlertTriangle size={18} />
         <span>{report.warnings.join(" / ")}。视觉推测不能判断食品安全。</span>
       </div>
+
+      <details className="json-preview">
+        <summary>
+          <Code2 size={17} />
+          图片识别 JSON
+        </summary>
+        <pre>{JSON.stringify(report.modelJson, null, 2)}</pre>
+      </details>
 
       <div className="feedback-row">
         {feedbackOptions.map((item) => {
@@ -707,15 +874,26 @@ function RadarChart({ scores }) {
   );
 }
 
-function buildReport(source, profile) {
+function buildReport(source, profile, tasteMemory, selectedProvider) {
   const base = source.seed || inferReportFromClues(source.clues || {});
-  const match = calculateMatch(base.scores, profile, base);
+  const memoryProfile = parseTasteMemory(tasteMemory);
+  const match = calculateMatch(base.scores, profile, base, memoryProfile);
   const reason = buildReason(base.scores, profile, match);
+  const userComparisons = buildUserComparisons(base, memoryProfile);
+  const personalTranslation = buildPersonalTranslation(
+    base,
+    userComparisons,
+    memoryProfile,
+    match
+  );
 
   return {
     ...base,
     match,
     reason,
+    userComparisons,
+    personalTranslation,
+    modelJson: buildModelJson(base, source, selectedProvider, memoryProfile, match),
   };
 }
 
@@ -835,7 +1013,7 @@ function inferReportFromClues(clues) {
   };
 }
 
-function calculateMatch(scores, profile, base) {
+function calculateMatch(scores, profile, base, memoryProfile) {
   const spiceLimit = {
     none: 1,
     mild: 4,
@@ -882,6 +1060,29 @@ function calculateMatch(scores, profile, base) {
     match -= 9;
   }
 
+  const memoryTraitText = [
+    ...base.textures,
+    ...base.aromas,
+    ...base.similar,
+    base.foodName,
+  ].join(" ");
+
+  memoryProfile.preferredTraits.forEach((trait) => {
+    if (memoryTraitText.includes(trait)) match += 4;
+  });
+
+  memoryProfile.avoidTraits.forEach((trait) => {
+    if (memoryTraitText.includes(trait)) match -= 7;
+  });
+
+  memoryProfile.likedFoods.forEach((food) => {
+    if (base.similar.includes(food) || base.foodName.includes(food)) match += 6;
+  });
+
+  memoryProfile.dislikedFoods.forEach((food) => {
+    if (base.foodName.includes(food) || memoryTraitText.includes(food)) match -= 8;
+  });
+
   return clamp(Math.round(match), 18, 96);
 }
 
@@ -917,6 +1118,170 @@ function getVerdict(match) {
   if (match >= 72) return "值得尝试";
   if (match >= 58) return "先少量尝试";
   return "谨慎尝试";
+}
+
+function parseTasteMemory(memory) {
+  const likedFoods = splitFoodText(memory.liked);
+  const familiarFoods = splitFoodText(memory.familiar);
+  const dislikedFoods = splitFoodText(memory.disliked);
+  const preferredTraits = inferTraitsFromFoods([...likedFoods, ...familiarFoods]);
+  const avoidTraits = inferAvoidTraits(dislikedFoods);
+
+  return {
+    likedFoods,
+    familiarFoods,
+    dislikedFoods,
+    preferredTraits,
+    avoidTraits,
+  };
+}
+
+function splitFoodText(text) {
+  return text
+    .split(/[、,，\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+function inferTraitsFromFoods(foods) {
+  const text = foods.join(" ");
+  const traits = [];
+  const rules = [
+    ["炸鸡|烧烤|烤翅|薯条", ["酥脆", "焦香", "油炸香"]],
+    ["糖醋|番茄|柠檬", ["酸甜", "清亮酸感"]],
+    ["麻辣|火锅|麻辣烫|酸辣粉", ["麻辣", "咸鲜", "红油香"]],
+    ["芝士|奶茶|蛋糕|奶油", ["奶香", "顺滑", "甜"]],
+    ["咖喱", ["香料感", "浓稠", "咸鲜"]],
+    ["牛腩|烤肉|肉", ["肉香", "咸鲜", "扎实"]],
+  ];
+
+  rules.forEach(([pattern, values]) => {
+    if (new RegExp(pattern).test(text)) traits.push(...values);
+  });
+
+  return [...new Set(traits)].slice(0, 10);
+}
+
+function inferAvoidTraits(foods) {
+  const text = foods.join(" ");
+  const traits = [];
+  const rules = [
+    ["香菜", ["香菜", "草本味"]],
+    ["苦瓜|苦", ["苦味"]],
+    ["海鲜|腥", ["腥味"]],
+    ["内脏", ["内脏味", "腥味"]],
+    ["油|腻", ["油润", "太油"]],
+    ["辣", ["过辣"]],
+  ];
+
+  rules.forEach(([pattern, values]) => {
+    if (new RegExp(pattern).test(text)) traits.push(...values);
+  });
+
+  return [...new Set(traits)].slice(0, 10);
+}
+
+function buildUserComparisons(base, memoryProfile) {
+  const candidates = [
+    ...memoryProfile.likedFoods,
+    ...memoryProfile.familiarFoods,
+    ...base.similar,
+  ];
+
+  const uniqueCandidates = [...new Set(candidates)].slice(0, 5);
+
+  return uniqueCandidates.map((food, index) => {
+    const directMatch = base.similar.includes(food) || base.foodName.includes(food);
+    const similarity = clamp(86 - index * 7 + (directMatch ? 8 : 0), 42, 94);
+    const reason = directMatch
+      ? "和图片里的做法、调味方向很接近。"
+      : buildComparisonReason(food, base);
+
+    return { food, similarity, reason };
+  });
+}
+
+function buildComparisonReason(food, base) {
+  if (/炸鸡|烤|烧烤|薯条/.test(food)) return `都带有${base.aromas[0] || "熟食香"}和较强口感。`;
+  if (/糖醋|番茄|柠檬/.test(food)) return "可以用酸甜强度来理解它的前段味道。";
+  if (/麻辣|火锅|麻辣烫/.test(food)) return "可以用麻辣和咸鲜强度来做参照。";
+  if (/奶茶|蛋糕|芝士/.test(food)) return "可以用甜度、奶香和顺滑感来对比。";
+  return `主要对比${base.textures.slice(0, 2).join("、")}和${base.aromas[0] || "香气"}。`;
+}
+
+function buildPersonalTranslation(base, comparisons, memoryProfile, match) {
+  const [nearest] = comparisons;
+  const dislikedHit = memoryProfile.avoidTraits.find((trait) =>
+    [...base.textures, ...base.aromas, ...base.warnings].join(" ").includes(trait)
+  );
+
+  if (nearest && match >= 72) {
+    return `它会比较接近你熟悉的「${nearest.food}」，但这道菜的${getTopFlavorLabels(base.scores)
+      .slice(0, 2)
+      .join("、")}更明显。`;
+  }
+
+  if (dislikedHit) {
+    return `它可能碰到你不太喜欢的「${dislikedHit}」，建议先少量尝试。`;
+  }
+
+  return `它和你的味觉记忆有部分重合，但图片线索还不足，适合把它当成一次低风险尝试。`;
+}
+
+function buildModelJson(base, source, selectedProvider, memoryProfile, match) {
+  const provider = modelProviders.find((item) => item.id === selectedProvider);
+
+  return {
+    model_provider: provider?.name || "Qwen 视觉",
+    input_type: source.type === "upload" ? "user_photo" : "sample_photo",
+    food_candidates: [
+      {
+        name: base.foodName,
+        confidence: Number((base.confidence / 100).toFixed(2)),
+      },
+    ],
+    ingredients: guessIngredients(base),
+    cooking_methods: guessMethods(base),
+    visual_cues: {
+      golden_crust: base.scores.greasy >= 6 ? 8 : 3,
+      red_sauce: base.scores.spicy >= 5 ? 7 : 2,
+      glossy_oil: base.scores.greasy,
+      creaminess: base.aromas.some((item) => item.includes("奶")) ? 8 : 1,
+      fresh_green: base.textures.includes("清淡") ? 7 : 1,
+    },
+    flavor_scores: base.scores,
+    texture_tags: base.textures,
+    aroma_tags: base.aromas,
+    user_memory: {
+      liked_foods: memoryProfile.likedFoods.slice(0, 5),
+      familiar_foods: memoryProfile.familiarFoods.slice(0, 5),
+      avoid_traits: memoryProfile.avoidTraits,
+    },
+    user_like_score: match,
+    risk_notes: base.warnings,
+  };
+}
+
+function guessIngredients(base) {
+  const text = `${base.foodName} ${base.description}`;
+  const ingredients = [];
+  if (/鸡|炸鸡/.test(text)) ingredients.push("鸡肉");
+  if (/面/.test(text)) ingredients.push("面条");
+  if (/奶|芝士|蛋糕|塔/.test(text)) ingredients.push("奶制品");
+  if (/蔬菜|沙拉|香草/.test(text)) ingredients.push("蔬菜");
+  if (/辣|红油/.test(text)) ingredients.push("辣椒或红油");
+  return ingredients.length ? ingredients : ["主食材不确定"];
+}
+
+function guessMethods(base) {
+  const text = `${base.foodName} ${base.description} ${base.textures.join(" ")}`;
+  const methods = [];
+  if (/炸|酥脆|外脆/.test(text)) methods.push("油炸");
+  if (/烤|焦香/.test(text)) methods.push("烘烤或煎烤");
+  if (/裹酱|挂汁|酱/.test(text)) methods.push("裹酱");
+  if (/凉|清爽|沙拉/.test(text)) methods.push("凉拌");
+  return methods.length ? methods : ["常规烹调"];
 }
 
 function readFileAsDataUrl(file) {
