@@ -6,6 +6,7 @@ import {
   Check,
   ChevronRight,
   Code2,
+  ExternalLink,
   Flame,
   Heart,
   ImagePlus,
@@ -19,12 +20,106 @@ import {
   Upload,
 } from "lucide-react";
 
+const ANALYSIS_API_URL =
+  "https://taste-lens-api.hpuxyh-taste-lens.workers.dev/api/analyze-food";
+const API_HEALTH_URL =
+  "https://taste-lens-api.hpuxyh-taste-lens.workers.dev/api/health";
+
+const sampleImages = {
+  crispyChicken: svgDataUrl(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200">
+      <rect width="900" height="1200" fill="#f2e4d2"/>
+      <ellipse cx="450" cy="660" rx="330" ry="250" fill="#fff8ef"/>
+      <ellipse cx="450" cy="660" rx="285" ry="205" fill="#fff1dd"/>
+      <g fill="#c7772f" stroke="#8f471e" stroke-width="8">
+        <path d="M258 565c24-94 155-117 211-37 63-60 184-32 209 56 28 99-48 183-143 178-47 67-160 64-202-9-86 6-133-82-75-188z"/>
+        <path d="M487 433c64-62 178-22 181 67 4 96-115 144-181 74-44 30-108 7-119-45-13-63 61-115 119-96z"/>
+        <path d="M229 712c12-73 96-114 157-73 59 39 52 134-12 166-68 34-158-17-145-93z"/>
+      </g>
+      <g fill="none" stroke="#d94f3d" stroke-width="22" stroke-linecap="round">
+        <path d="M272 541c93 44 208 49 324 16"/>
+        <path d="M329 706c77 33 184 27 279-18"/>
+      </g>
+      <g fill="#ffe2a8" opacity=".75">
+        <circle cx="339" cy="514" r="24"/>
+        <circle cx="540" cy="617" r="18"/>
+        <circle cx="420" cy="765" r="22"/>
+      </g>
+    </svg>
+  `),
+  malaNoodle: svgDataUrl(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200">
+      <rect width="900" height="1200" fill="#efe5d7"/>
+      <ellipse cx="450" cy="630" rx="340" ry="270" fill="#2f3c43"/>
+      <ellipse cx="450" cy="590" rx="300" ry="210" fill="#fff7e6"/>
+      <ellipse cx="450" cy="590" rx="265" ry="180" fill="#c8422d"/>
+      <g fill="none" stroke="#f6d06a" stroke-width="22" stroke-linecap="round">
+        <path d="M254 572c106-84 278 86 392-1"/>
+        <path d="M259 638c118-84 255 73 382-7"/>
+        <path d="M305 500c96-50 208 62 304 8"/>
+      </g>
+      <g fill="#283f2f">
+        <circle cx="320" cy="503" r="34"/>
+        <circle cx="613" cy="652" r="30"/>
+        <circle cx="523" cy="469" r="24"/>
+      </g>
+      <g fill="#fae7bb">
+        <circle cx="361" cy="681" r="16"/>
+        <circle cx="576" cy="548" r="15"/>
+        <circle cx="471" cy="646" r="12"/>
+      </g>
+    </svg>
+  `),
+  lemonDessert: svgDataUrl(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200">
+      <rect width="900" height="1200" fill="#ecf2ec"/>
+      <ellipse cx="450" cy="665" rx="330" ry="235" fill="#ffffff"/>
+      <circle cx="450" cy="610" r="220" fill="#c9904c"/>
+      <circle cx="450" cy="610" r="178" fill="#f9d761"/>
+      <circle cx="450" cy="610" r="118" fill="#fff3a8"/>
+      <path d="M448 395a214 214 0 0 1 213 214H448z" fill="#ffe67b" opacity=".75"/>
+      <g fill="#fffaf0">
+        <circle cx="376" cy="540" r="34"/>
+        <circle cx="524" cy="550" r="31"/>
+        <circle cx="461" cy="710" r="38"/>
+      </g>
+      <g fill="#d2a840">
+        <circle cx="350" cy="710" r="11"/>
+        <circle cx="570" cy="672" r="10"/>
+        <circle cx="482" cy="480" r="9"/>
+      </g>
+    </svg>
+  `),
+  greenBowl: svgDataUrl(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200">
+      <rect width="900" height="1200" fill="#e7ede7"/>
+      <ellipse cx="450" cy="650" rx="340" ry="265" fill="#f7f5ea"/>
+      <ellipse cx="450" cy="610" rx="292" ry="205" fill="#dfe8c9"/>
+      <g>
+        <circle cx="310" cy="548" r="78" fill="#4d9656"/>
+        <circle cx="451" cy="506" r="83" fill="#76b65f"/>
+        <circle cx="586" cy="574" r="72" fill="#2f7a59"/>
+        <circle cx="365" cy="682" r="78" fill="#8fc56a"/>
+        <circle cx="534" cy="692" r="82" fill="#5ba765"/>
+      </g>
+      <g fill="#f2d26b">
+        <circle cx="421" cy="606" r="18"/>
+        <circle cx="567" cy="646" r="16"/>
+        <circle cx="330" cy="623" r="15"/>
+      </g>
+      <g fill="#f7f1df">
+        <rect x="424" y="430" width="54" height="230" rx="27" transform="rotate(32 451 545)"/>
+        <rect x="490" y="457" width="42" height="190" rx="21" transform="rotate(63 511 552)"/>
+      </g>
+    </svg>
+  `),
+};
+
 const sampleFoods = [
   {
     id: "crispy-chicken",
     title: "甜辣炸鸡",
-    image:
-      "https://images.unsplash.com/photo-1562967916-eb82221dfb36?auto=format&fit=crop&w=900&q=80",
+    image: sampleImages.crispyChicken,
     seed: {
       foodName: "甜辣炸鸡",
       confidence: 82,
@@ -49,8 +144,7 @@ const sampleFoods = [
   {
     id: "mala-noodle",
     title: "麻辣拌面",
-    image:
-      "https://images.unsplash.com/photo-1552611052-33e04de081de?auto=format&fit=crop&w=900&q=80",
+    image: sampleImages.malaNoodle,
     seed: {
       foodName: "麻辣拌面",
       confidence: 76,
@@ -75,8 +169,7 @@ const sampleFoods = [
   {
     id: "lemon-dessert",
     title: "柠檬奶油塔",
-    image:
-      "https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=900&q=80",
+    image: sampleImages.lemonDessert,
     seed: {
       foodName: "柠檬奶油塔",
       confidence: 79,
@@ -101,8 +194,7 @@ const sampleFoods = [
   {
     id: "green-bowl",
     title: "香草蔬菜碗",
-    image:
-      "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=80",
+    image: sampleImages.greenBowl,
     seed: {
       foodName: "香草蔬菜碗",
       confidence: 74,
@@ -139,9 +231,7 @@ const defaultProfile = {
 };
 
 const providerOptions = [
-  { id: "qwen", name: "Qwen", label: "视觉主模型" },
-  { id: "doubao", name: "豆包", label: "速度备选" },
-  { id: "kimi", name: "Kimi", label: "表达层" },
+  { id: "dashscope", name: "阿里百炼", label: "Qwen-VL 图片味道分析" },
 ];
 
 const flavorLabels = {
@@ -184,10 +274,11 @@ function App() {
   const [view, setView] = useState("capture");
   const [memory, setMemory] = useState(defaultMemory);
   const [profile, setProfile] = useState(defaultProfile);
-  const [provider, setProvider] = useState("qwen");
+  const [provider, setProvider] = useState("dashscope");
   const [visualSource, setVisualSource] = useState(initialSource);
   const [analysisSource, setAnalysisSource] = useState(initialSource);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisMode, setAnalysisMode] = useState("local");
   const [feedback, setFeedback] = useState("");
 
   const report = useMemo(
@@ -203,21 +294,45 @@ function App() {
     setProfile((current) => ({ ...current, [key]: value }));
   }
 
-  function analyzeSource(source) {
+  async function analyzeSource(source) {
     setVisualSource(source);
     setView("report");
     setIsAnalyzing(true);
     setFeedback("");
+    setAnalysisMode("aliyun");
 
-    window.setTimeout(() => {
-      setAnalysisSource(source);
+    try {
+      if (source.type !== "upload") {
+        await wait(520);
+        setAnalysisSource({ ...source, modelSource: "sample" });
+        setAnalysisMode("sample");
+        return;
+      }
+
+      const modelSeed = await requestModelAnalysis(source, memory, profile);
+      setAnalysisSource({
+        ...source,
+        title: modelSeed.foodName || source.title,
+        seed: modelSeed,
+        modelSource: "aliyun",
+      });
+      setAnalysisMode("aliyun");
+    } catch (error) {
+      console.warn("TasteLens model fallback", error);
+      setAnalysisSource({
+        ...source,
+        modelSource: "local",
+        modelError: error instanceof Error ? error.message : "model_failed",
+      });
+      setAnalysisMode("local");
+    } finally {
       setIsAnalyzing(false);
-    }, 720);
+    }
   }
 
   async function handleFile(file) {
     if (!file || !file.type.startsWith("image/")) return;
-    const image = await readFileAsDataUrl(file);
+    const image = await resizeImageDataUrl(await readFileAsDataUrl(file));
     const clues = await analyzeImagePixels(image);
     analyzeSource({
       id: `upload-${Date.now()}`,
@@ -265,6 +380,7 @@ function App() {
             <CaptureView
               source={visualSource}
               report={report}
+              analysisMode={analysisMode}
               onUploadClick={() => fileInputRef.current?.click()}
               onAnalyze={() => analyzeSource(visualSource)}
               onSampleSelect={analyzeSource}
@@ -276,6 +392,7 @@ function App() {
               isAnalyzing={isAnalyzing}
               image={analysisSource.image}
               report={report}
+              analysisMode={analysisMode}
               feedback={feedback}
               onFeedback={setFeedback}
               onCapture={() => setView("capture")}
@@ -310,7 +427,10 @@ function App() {
           type="file"
           accept="image/*"
           capture="environment"
-          onChange={(event) => handleFile(event.target.files?.[0])}
+          onChange={(event) => {
+            handleFile(event.target.files?.[0]);
+            event.target.value = "";
+          }}
         />
       </div>
     </div>
@@ -381,6 +501,16 @@ function MemoryView({
 
       <section className="section-block">
         <SectionTitle icon={Bot} title="模型" />
+        <div className="model-status-card">
+          <div>
+            <strong>已接入阿里百炼</strong>
+            <span>前端发图片给后端代理，密钥只保存在 Worker Secret。</span>
+          </div>
+          <a href={API_HEALTH_URL} target="_blank" rel="noreferrer">
+            接口状态
+            <ExternalLink size={14} />
+          </a>
+        </div>
         <div className="provider-grid">
           {providerOptions.map((option) => (
             <button
@@ -417,7 +547,14 @@ function MemoryField({ label, value, onChange }) {
   );
 }
 
-function CaptureView({ source, report, onUploadClick, onAnalyze, onSampleSelect }) {
+function CaptureView({
+  source,
+  report,
+  analysisMode,
+  onUploadClick,
+  onAnalyze,
+  onSampleSelect,
+}) {
   return (
     <section className="flow-stack">
       <div className="capture-stage">
@@ -437,6 +574,18 @@ function CaptureView({ source, report, onUploadClick, onAnalyze, onSampleSelect 
           <ScanSearch size={18} />
           分析
         </button>
+      </div>
+
+      <div className="model-status-line">
+        <Bot size={15} />
+        <span>
+          {analysisMode === "aliyun"
+            ? "阿里百炼视觉模型已连接"
+            : "优先调用阿里百炼，失败时本地备用"}
+        </span>
+        <a href={API_HEALTH_URL} target="_blank" rel="noreferrer">
+          查看
+        </a>
       </div>
 
       <section className="section-block">
@@ -465,7 +614,15 @@ function CaptureView({ source, report, onUploadClick, onAnalyze, onSampleSelect 
   );
 }
 
-function ReportView({ isAnalyzing, image, report, feedback, onFeedback, onCapture }) {
+function ReportView({
+  isAnalyzing,
+  image,
+  report,
+  analysisMode,
+  feedback,
+  onFeedback,
+  onCapture,
+}) {
   if (isAnalyzing) return <AnalyzingView />;
 
   const topFlavors = getTopFlavorLabels(report.scores).slice(0, 3);
@@ -482,7 +639,15 @@ function ReportView({ isAnalyzing, image, report, feedback, onFeedback, onCaptur
 
       <div className="result-title">
         <div>
-          <span>可信度 {report.confidence}%</span>
+          <span>
+            {analysisMode === "aliyun"
+              ? "阿里视觉模型"
+              : analysisMode === "sample"
+                ? "示例内置分析"
+                : "本地备用分析"}{" "}
+            · 可信度{" "}
+            {report.confidence}%
+          </span>
           <h2>{report.foodName}</h2>
         </div>
         <button type="button" onClick={onCapture}>
@@ -648,8 +813,15 @@ function buildReport(source, memory, profile, provider) {
   const base = source.seed || inferReportFromClues(source.clues || {});
   const memoryProfile = parseTasteMemory(memory);
   const match = calculateMatch(base, profile, memoryProfile);
-  const userComparisons = buildUserComparisons(base, memoryProfile);
-  const personalTranslation = buildPersonalTranslation(base, userComparisons, memoryProfile, match);
+  const providedComparisons = Array.isArray(base.userComparisons)
+    ? base.userComparisons.slice(0, 5)
+    : [];
+  const userComparisons = providedComparisons.length
+    ? providedComparisons
+    : buildUserComparisons(base, memoryProfile);
+  const personalTranslation =
+    base.personalTranslation ||
+    buildPersonalTranslation(base, userComparisons, memoryProfile, match);
 
   return {
     ...base,
@@ -921,8 +1093,9 @@ function buildPersonalTranslation(base, comparisons, memoryProfile, match) {
 }
 
 function buildModelJson(base, source, provider, memoryProfile, match) {
-  return {
+  const modelJson = {
     model_provider: provider,
+    analysis_source: source.modelSource || "local",
     input_type: source.type === "upload" ? "user_photo" : "sample_photo",
     food_candidates: [
       {
@@ -943,6 +1116,16 @@ function buildModelJson(base, source, provider, memoryProfile, match) {
     user_like_score: match,
     risk_notes: base.warnings,
   };
+
+  if (base.modelJson && Object.keys(base.modelJson).length) {
+    modelJson.model_output = base.modelJson;
+  }
+
+  if (source.modelError) {
+    modelJson.model_error = source.modelError;
+  }
+
+  return modelJson;
 }
 
 function guessIngredients(base) {
@@ -986,6 +1169,67 @@ function readFileAsDataUrl(file) {
     reader.onload = () => resolve(reader.result);
     reader.onerror = reject;
     reader.readAsDataURL(file);
+  });
+}
+
+function wait(milliseconds) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, milliseconds);
+  });
+}
+
+function svgDataUrl(markup) {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;
+}
+
+function requestModelAnalysis(source, memory, profile) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 45000);
+  const imagePayload = source.image.startsWith("data:")
+    ? { dataUrl: source.image }
+    : { url: source.image };
+
+  return fetch(ANALYSIS_API_URL, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      image: imagePayload,
+      memory,
+      profile,
+    }),
+    signal: controller.signal,
+  })
+    .then(async (response) => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.message || data.error || `api_${response.status}`);
+      }
+      return data;
+    })
+    .finally(() => window.clearTimeout(timeout));
+}
+
+function resizeImageDataUrl(dataUrl, maxSize = 1280, quality = 0.86) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+      if (scale >= 1) {
+        resolve(dataUrl);
+        return;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const context = canvas.getContext("2d");
+      context.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
   });
 }
 

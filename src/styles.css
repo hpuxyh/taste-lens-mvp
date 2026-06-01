@@ -267,7 +267,9 @@ img {
 .feedback-row button,
 .bottom-tabs button,
 .primary-action,
-.ghost-action {
+.ghost-action,
+.model-status-card a,
+.model-status-line a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -293,7 +295,7 @@ img {
 
 .provider-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 8px;
 }
 
@@ -321,6 +323,46 @@ img {
 .provider-grid span {
   color: var(--muted);
   font-size: 11px;
+}
+
+.model-status-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(40, 121, 109, 0.18);
+  border-radius: 8px;
+  background: var(--green-2);
+}
+
+.model-status-card div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.model-status-card strong {
+  font-size: 14px;
+}
+
+.model-status-card span {
+  color: #47625b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.model-status-card a,
+.model-status-line a {
+  gap: 5px;
+  min-height: 34px;
+  padding: 0 10px;
+  background: #fff;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .primary-action,
@@ -398,6 +440,28 @@ img {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
+}
+
+.model-status-line {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--green);
+}
+
+.model-status-line span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sample-row {
