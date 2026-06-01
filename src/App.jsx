@@ -181,7 +181,7 @@ const initialSource = {
 
 function App() {
   const fileInputRef = useRef(null);
-  const [view, setView] = useState("memory");
+  const [view, setView] = useState("capture");
   const [memory, setMemory] = useState(defaultMemory);
   const [profile, setProfile] = useState(defaultProfile);
   const [provider, setProvider] = useState("qwen");
